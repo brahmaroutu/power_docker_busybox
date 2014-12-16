@@ -1,4 +1,4 @@
-FROM ubuntu:14.04
+FROM debian:wheezy
 
 # This will make it easier to upgrade to the next version of buildroot.
 # You might have to also update the busybox version at the end of this file!
@@ -7,6 +7,7 @@ ENV BUILDROOT_VERSION 2014.08
 ENV TERM dumb
 RUN apt-get update -q
 RUN apt-get install -qy wget build-essential libncurses-dev rsync unzip bc
+RUN apt-get install -qy python
 # Buildroot needs Python. Let's git it!
 RUN which python || ln /usr/bin/python3 /usr/bin/python
 # Let's make wget output a bit less verbose.
@@ -18,13 +19,15 @@ RUN md5sum --check buildroot.md5
 RUN tar -zxf buildroot-$BUILDROOT_VERSION.tar.gz
 # This symlink is because WORKDIR doesn't expand $VARS.
 RUN ln -s buildroot-$BUILDROOT_VERSION buildroot
-RUN locale-gen en_US.utf8
+RUN apt-get install -qy locales
+RUN sed -i 's/# en_US.UTF-8/en_US.UTF-8/' /etc/locale.gen 
+RUN locale-gen
 RUN sed -i 's|\$\$(HOST_DIR)/usr/bin/fakeroot|/usr/bin/fakeroot|' /buildroot/fs/common.mk
 WORKDIR /buildroot
 RUN make defconfig
 RUN sed -i "s/BR2_i386=y/# BR2_i386 is not set/" .config
 RUN for CFGVAR in \
-    BR2_powerpc64le \
+    BR2_s390x \
     BR2_TOOLCHAIN_BUILDROOT_LARGEFILE \
 # Disable IPv6 for now, because some programs (like nc) will not try to connect
 # over IPv4 if something resolves to at least a AAAA record.
